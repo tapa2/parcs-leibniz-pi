@@ -1,0 +1,7 @@
+# build output
+build/
+out/Main.jar
+out/SeriesWorker.jar
+
+# archive for Cloud Shell upload
+Lab1_cloud.zip
