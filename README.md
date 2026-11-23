@@ -50,15 +50,14 @@ bash cloud/cleanup.sh    # delete VMs when finished
 
 ## Results
 
-Google Cloud, N = 10^10, best of 3 runs:
+Google Cloud, N = 10^10, best of 3 runs, speedup relative to 1 worker:
 
 | Workers | Best time, s | Speedup | Efficiency |
 | --- | --- | --- | --- |
-| sequential | 26.581 | 1.00x | 100% |
-| 1 | 26.707 | 1.00x | 99.5% |
-| 2 | 19.210 | 1.38x | 69.2% |
-| 3 | 12.776 | 2.08x | 69.4% |
-| 6 | 7.015 | 3.79x | 63.1% |
+| 1 | 26.707 | 1.00x | 100% |
+| 2 | 19.210 | 1.39x | 69.5% |
+| 3 | 12.776 | 2.09x | 69.7% |
+| 6 | 7.015 | 3.81x | 63.5% |
 
 π = 3.141592653490, error vs `Math.PI` = 1.0e-10 ≈ 1/N.
 Screenshots: [`docs/screenshots`](docs/screenshots). Full report: `Звіт_ЛР1_PARCS_Тертичний.docx`.
