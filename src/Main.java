@@ -16,15 +16,19 @@ import java.util.Scanner;
  *     line 3: how many times to repeat every measurement (best time is used)
  *
  * Steps:
- *   1. Sequential run on this machine -> base time T1.
- *   2. For every worker count p: split [0, N) into p equal ranges,
+ *   1. For every worker count p: split [0, N) into p equal ranges,
  *      send one range to each worker, add up the partial sums.
- *   3. Print a table: best and average time, speedup T1/Tp, efficiency Sp/p.
+ *   2. Print a table: best time, speedup T1/Tp, efficiency Sp/p, where
+ *      T1 is the time with 1 worker (the same PARCS program on one daemon).
+ *   3. Check the result against Math.PI.
  */
 public class Main {
 
     /** Number of terms summed by one call of blockSum. */
     static final long BLOCK = 100_000L;
+
+    /** Result of the measurements for one worker count. */
+    record Result(int p, double best, double pi) {}
 
     /**
      * Partial sum of the Leibniz series for term indices [from, to).
@@ -90,63 +94,49 @@ public class Main {
         }
         int repeats = in.hasNextLine() ? Integer.parseInt(in.nextLine().trim()) : 1;
         in.close();
+        if (!workerCounts.contains(1)) {
+            workerCounts.add(0, 1); // 1 worker is the base for the speedup
+        }
 
         System.out.println("N = " + n + ", repeats = " + repeats);
 
-        // 2. Sequential baseline.
-        // Speedup uses the BEST (minimal) time of all repeats: it is the least
-        // affected by outside noise (other processes, CPU heating up).
-        // The average is printed too, for comparison.
-        double seqPi = 0.0;
-        double seqTotal = 0.0;
-        double seqBest = Double.MAX_VALUE;
-        for (int r = 0; r < repeats; r++) {
-            long t0 = System.nanoTime();
-            seqPi = 4.0 * partialSum(0, n);
-            double t = (System.nanoTime() - t0) / 1e9;
-            System.out.printf("  sequential run %d: %.3f s%n", r + 1, t);
-            seqTotal += t;
-            seqBest = Math.min(seqBest, t);
-        }
-        double seqAvg = seqTotal / repeats;
-        System.out.printf("Sequential: pi = %.12f, best = %.3f s, avg = %.3f s%n",
-                seqPi, seqBest, seqAvg);
-
-        // 3. Parallel runs
+        // 2. Parallel runs.
+        // The BEST (minimal) time of all repeats is used: it is the least
+        // affected by outside noise (other VMs on the same host).
         AMInfo info = new AMInfo(curtask, null);
-        List<String> table = new ArrayList<>();
+        List<Result> results = new ArrayList<>();
 
         for (int p : workerCounts) {
             double pi = 0.0;
-            double total = 0.0;
             double best = Double.MAX_VALUE;
             for (int r = 0; r < repeats; r++) {
                 long start = System.nanoTime();
                 pi = parallelPi(info, n, p);
                 double t = (System.nanoTime() - start) / 1e9;
                 System.out.printf("  %d workers, run %d: %.3f s%n", p, r + 1, t);
-                total += t;
                 best = Math.min(best, t);
             }
-            double avg = total / repeats;
-
-            double speedup = seqBest / best;
-            double efficiency = speedup / p;
-            table.add(String.format("%7d | %7.3f | %7.3f | %6.2fx | %9.1f%% | %.12f",
-                    p, best, avg, speedup, efficiency * 100, pi));
+            results.add(new Result(p, best, pi));
         }
 
-        // 4. Summary table (printed at the end, so it is not mixed with run logs)
+        // 3. Summary table. T1 = best time with 1 worker.
+        double t1 = 0.0;
+        for (Result r : results) {
+            if (r.p() == 1) {
+                t1 = r.best();
+            }
+        }
         System.out.println();
-        System.out.println("workers | best, s |  avg, s | speedup | efficiency | pi");
-        System.out.printf("   seq. | %7.3f | %7.3f |   1.00x |     100.0%% | %.12f%n",
-                seqBest, seqAvg, seqPi);
-        for (String row : table) {
-            System.out.println(row);
+        System.out.println("workers | best, s | speedup | efficiency | pi");
+        for (Result r : results) {
+            double speedup = t1 / r.best();
+            System.out.printf("%7d | %7.3f | %6.2fx | %9.1f%% | %.12f%n",
+                    r.p(), r.best(), speedup, speedup / r.p() * 100, r.pi());
         }
 
+        double pi = results.get(results.size() - 1).pi();
         System.out.println();
-        System.out.printf("Math.PI = %.12f, error = %.3e%n", Math.PI, Math.abs(seqPi - Math.PI));
+        System.out.printf("Math.PI = %.12f, error = %.3e%n", Math.PI, Math.abs(pi - Math.PI));
 
         curtask.end();
     }

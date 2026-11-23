@@ -15,9 +15,9 @@ and the efficiency `Ep = Sp / p`.
 
 ## How it works
 
-- `Main` (root module) reads `out/input`, runs the sequential version to get `T1`, then for every
-  worker count `p` splits the range `[0, N)` into `p` equal parts, creates a PARCS point per part,
-  sends `from` and `to` over a channel and adds up the partial sums.
+- `Main` (root module) reads `out/input`, then for every worker count `p` splits the range `[0, N)`
+  into `p` equal parts, creates a PARCS point per part, sends `from` and `to` over a channel and adds
+  up the partial sums. `T1` is the best time with 1 worker; the result is checked against `Math.PI`.
 - `SeriesWorker` reads `from` and `to`, computes the partial sum and sends it back.
 - The sum is computed in blocks of 100 000 terms, so the JIT compiler always compiles the hot loop
   normally (one huge loop is optimised mid-run via OSR and was randomly ~4x slower).
