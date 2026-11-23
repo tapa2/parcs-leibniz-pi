@@ -6,7 +6,7 @@
 #
 # Layout (fits the 8 vCPU quota of a new trial project):
 #     app       - hosts-server (port 3333) + root module Main     e2-standard-2
-#     daemon-N  - PARCS daemon (port 2222), runs the workers      e2-standard-2
+#     daemon-N  - PARCS daemon (port 2222), runs the workers      DAEMON_TYPE (default = TYPE)
 # Safe to rerun: existing VMs are reused, old processes are restarted.
 set -euo pipefail
 
@@ -27,7 +27,7 @@ for vm in app $DAEMONS; do
     if gcloud compute instances describe "$vm" --zone "$ZONE" >/dev/null 2>&1; then
         echo "== $vm already exists"
     else
-        gcloud compute instances create "$vm" --zone "$ZONE" --machine-type "$TYPE" \
+        gcloud compute instances create "$vm" --zone "$ZONE" --machine-type "$( [ "$vm" = app ] && echo "$TYPE" || echo "${DAEMON_TYPE:-$TYPE}" )" \
             --image-family debian-12 --image-project debian-cloud
     fi
 done
